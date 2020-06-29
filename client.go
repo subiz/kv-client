@@ -2,11 +2,10 @@ package client
 
 import (
 	"context"
-	"github.com/subiz/goutils/log"
 	"github.com/subiz/header"
 	pb "github.com/subiz/header/kv"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/naming"
+	"google.golang.org/grpc/balancer/roundrobin"
 	"time"
 )
 
@@ -20,19 +19,15 @@ func dialGrpc(service string) (*grpc.ClientConn, error) {
 	// Enabling WithBlock tells the client to not give up trying to find a server
 	opts = append(opts, grpc.WithBlock())
 	// However, we're still setting a timeout so that if the server takes too long, we still give up
-	opts = append(opts, grpc.WithTimeout(10*time.Second))
-	res, err := naming.NewDNSResolverWithFreq(5 * time.Second)
-	if err != nil {
-		return nil, err
-	}
-	opts = append(opts, grpc.WithBalancer(grpc.RoundRobin(res)))
+	opts = append(opts, grpc.WithTimeout(3*time.Second))
+	opts = append(opts, grpc.WithBalancerName(roundrobin.Name))
+
 	return grpc.Dial(service, opts...)
 }
 
 func dialKVService(service string) (header.KVClient, error) {
 	conn, err := dialGrpc(service)
 	if err != nil {
-		log.Error(err, "unable to connect to kv service")
 		return nil, err
 	}
 	return header.NewKVClient(conn), nil
